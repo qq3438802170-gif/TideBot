@@ -1,74 +1,58 @@
-import logging
+import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import ORJSONResponse
 
-# 假设我们在 core/config 中管理配置 (后续实现)
-# from tidebot.core.config import settings
-
-logger = logging.getLogger(__name__)
+from env import settings
+from api.middleware import TideBotMiddleware
+from api.v1.auth import router as auth_router
+from api.v1.bot import router as bot_router
+from api.v1.channel import router as channel_router
+from api.v1.chat import router as chat_router
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifecycle_handler(app: FastAPI):
     """
-    TideBot 全局生命周期管理
-    在此处初始化数据库连接池、加载内置工具、扫描并挂载用户插件。
+    TideBot 全局组件异步生命周期网关
+    可在此处初始化异步底座（如引擎启动、Redis 连接池、数据库迁移检查）
     """
-    logger.info("TideBot is starting up...")
-    
-    # 1. 初始化数据库连接
-    # await db_manager.connect()
-    
-    # 2. 注册内置底层工具 (例如：WebSearchTool)
-    # tool_registry.register(WebSearchTool())
-    
-    # 3. 动态加载用户插件
-    # plugin_manager.load_all_plugins(settings.PLUGINS_DIR)
-    
+    print(f"[{settings.PROJECT_NAME}] 生产级应用底座初始化启动中...")
     yield
-    
-    logger.info("TideBot is shutting down...")
-    # 清理资源、关闭连接等
-    # await db_manager.disconnect()
+    print(f"[{settings.PROJECT_NAME}] 正在安全释放系统全局核心资源...")
 
-def create_app() -> FastAPI:
-    """
-    工厂模式创建 FastAPI 应用实例，便于测试和后续扩展。
-    """
-    app = FastAPI(
-        title="TideBot API",
-        description="Core API for the TideBot modern AI Agent platform.",
-        version="0.1.0",
-        docs_url="/api/docs",
-        openapi_url="/api/openapi.json",
-        default_response_class=ORJSONResponse, # 提升序列化性能
-        lifespan=lifespan,
-    )
+# 初始化 FastAPI 实体驱动
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifecycle_handler
+)
 
-    # 跨域配置 - 针对 Web Dashboard 和 Mobile App 通信
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],  # 生产环境应通过 settings.BACKEND_CORS_ORIGINS 严格限制
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+# 挂载基础安全跨域插件 (CORS)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-    # 注册路由 (后续建立 api 模块后取消注释)
-    # from tidebot.api.v1.router import api_router
-    # app.include_router(api_router, prefix="/api/v1")
+# 挂载流式链路追踪高阶中间件
+app.add_middleware(TideBotMiddleware)
 
-    @app.get("/health", tags=["System"])
-    async def health_check() -> dict[str, str]:
-        """系统健康检查接口"""
-        return {"status": "ok", "service": "TideBot Core"}
-
-    return app
-
-app = create_app()
+# 注册统一核心路由分支
+app.include_router(auth_router, prefix=settings.API_V1_STR)
+app.include_router(bot_router, prefix=settings.API_V1_STR)
+app.include_router(channel_router, prefix=settings.API_V1_STR)
+app.include_router(chat_router, prefix=settings.API_V1_STR)
 
 if __name__ == "__main__":
-    import uvicorn
-    # 仅用于本地直接运行 python main.py，标准运行方式推荐使用 CLI
-    uvicorn.run("tidebot.main:app", host="0.0.0.0", port=8000, reload=True)
+    # 支持生产级直接一键拉起 python main.py
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        workers=1,
+        loop="asyncio"
+    )
