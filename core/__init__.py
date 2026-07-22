@@ -1,22 +1,8 @@
-"""
-TideBot Core Module
-核心业务逻辑与运行时，负责消息调度、Agent 运行时状态控制和插件加载。
-"""
+# TideBot Core Package
+# 该文件用于将 core 目录标识为 Python 包，并可用于暴露核心组件供外部调用
 
-from core.event_bus import EventBus, Event, EventPriority
-from core.tokenizer import Tokenizer
-from core.agent import AgentRuntime, MessageContext
-from core.plugin_loader import PluginLoader, BasePlugin
-from core.engine import MessageEngine
+from .config_manager import ConfigManager
+from .logger import setup_logger
+from .event_bus import EventBus
 
-__all__ = [
-    "EventBus",
-    "Event",
-    "EventPriority",
-    "Tokenizer",
-    "AgentRuntime",
-    "MessageContext",
-    "PluginLoader",
-    "BasePlugin",
-    "MessageEngine",
-]
+__all__ = ["ConfigManager", "setup_logger", "EventBus"]

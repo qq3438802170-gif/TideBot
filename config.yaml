@@ -1,0 +1,37 @@
+# ==========================================
+# TideBot 全局业务配置文件
+# 用于配置非敏感的系统参数和 Agent 默认行为
+# ==========================================
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  debug: true
+  # 允许跨域请求的来源，移动端或Web端本地调试时使用
+  cors_origins:
+    - "*"
+
+llm:
+  # 默认的全局模型提供商 (对应 LLMRouter 的分发逻辑)
+  default_provider: "openai"
+  # 默认模型名称
+  default_model: "gpt-4o-mini"
+  temperature: 0.7
+  max_tokens: 2048
+
+agent:
+  # 系统全局默认的人设提示词
+  system_prompt_template: >
+    你是一个名为 TideBot 的智能助理，由核心底座驱动。
+    你需要用专业、友好的语气回答用户的问题。
+    如果你需要使用工具，请仔细判断使用场景。
+  # 滑动记忆窗口大小 (保留最近的多少轮对话上下文)
+  memory_window_size: 15
+  # 是否允许系统自动总结并丢弃过于久远的冷数据
+  enable_memory_summarization: true
+  
+plugins:
+  # 第三方插件加载目录
+  plugin_dir: "./plugins"
+  # 是否在启动时自动扫描并激活所有安装的插件
+  auto_load: true
